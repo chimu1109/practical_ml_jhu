@@ -13,6 +13,8 @@ set.seed(1234)
 test <- read_csv("pml-testing.csv")
 train <- read_csv("pml-training.csv")
 
+str(train)
+
 train1 <- train[colSums(is.na(train))<=0.9*nrow(train)]
 
 train1 <- train1[,8:length(train1)]
