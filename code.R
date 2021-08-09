@@ -8,7 +8,7 @@ library(rpart)
 library(rpart.plot)
 
 
-set.seed(1234)
+set.seed(123456)
 
 test <- read_csv("pml-testing.csv")
 train <- read_csv("pml-training.csv")
