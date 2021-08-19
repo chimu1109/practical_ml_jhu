@@ -8,11 +8,15 @@ library(rpart)
 library(rpart.plot)
 
 
-set.seed(123456)
+set.seed(1234)
 
 test <- read_csv("pml-testing.csv")
 train <- read_csv("pml-training.csv")
 
+dim(train)
+dim(test)
+
+head(train)
 str(train)
 
 train1 <- train[colSums(is.na(train))<=0.9*nrow(train)]

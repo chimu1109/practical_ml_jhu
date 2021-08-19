@@ -1,0 +1,125 @@
+---
+title: "Course Project - Practical Machine Learning"
+author: "Aditi Madkaikar"
+date: "09/08/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+## Summary  
+
+This report is a part of assignments for the course Practical Machine Learning by Johns Hopkins University on Coursera. This is the 8th course in a speacialization of 10 courses.
+
+This course is aimed at learning to use Machine Learning models to predict outcomes from given datasets.
+
+This project uses the concepts taught in this course to predict the outcomes from the given dataset
+
+## The Dataset
+
+The dataset used here is a dataset complied from the data obtained by devices like Jawbone Up, Nike FuelBand, and Fitbit. the dataset consists of measurements taken to determine if a particular exercise is done properly or not. 6 participants performed the barbell lifts correctly and incorrectly a total of 5 times. The main aim of this dataset is to use machine learning models to predict if the exercise is done properly based on the data collected by the censors placed on the body. 
+
+
+The classe variable is the indicator of how the exercise is done. Class A represents the exercise being one to the exact specifications. Class B represents throwing elbows to the front. Class C represents lifting the dumbbell only halfway, class  represents lowering the dumbbell only halfway and class E is throwing hips to the front. This information is available on the Coursera course webpage and additional information is available at the original source of the dataset: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har
+
+
+## Data input and Processing
+
+Load the required libraries for project. Then load the dataset and analyse and clean it so that Machine Learning models can be applied to it. Also, set the seed to ensure reproducibility. 
+
+
+### Loading Libraries
+```{r libraries, warning=FALSE, message=FALSE}
+library(readr)
+library(tidyverse)
+library(caret)
+library(rattle)
+library(corrplot)
+library(randomForest)
+#library(RColorBrewer)
+library(rpart)
+#library(rpart.plot)
+
+
+set.seed(1234)
+```
+
+### Loading the data
+
+Load the data and find the dimensions of the raw data. 
+
+```{r load, warning=FALSE, message=FALSE}
+test <- read_csv("pml-testing.csv")
+train <- read_csv("pml-training.csv")
+
+dim(train)
+dim(test)
+```
+
+The train dataset has 19622 rows and 160 columns whereas the test dataset has 20 rows and 160 columns.
+
+Now, we look at what kind of information is there within the dataset. To do so we use only the train dataset. The test dataset is reserved only for testing the final model and should not be used for any other visualizing and model fitting. 
+
+```{r visual, message=FALSE, warning=FALSE}
+head(train)
+str(train, give.attr=F)
+```
+
+### Cleaning the data
+
+As one can see, the dataset has many NA values. These columns will not be of any significane when training a model as they have NA values. To avoid having columns with many NA values, we will remove the columns which have more than 90% NA values. Also, the first few columns give information about the date, time and the person doing the exercise. These are also not useful for model training. Hence, we will remove those as well.
+
+```{r cleaning, message=FALSE, warning=FALSE}
+train1 <- train[colSums(is.na(train))<=0.9*nrow(train)]
+train1 <- train1[,8:length(train1)]
+dim(train1)
+```
+
+In the same way we will remove the columns with >0.9 NAs from the test dataset. 
+
+```{r cleaning2, message=FALSE,warning=FALSE}
+test1 <- test[colSums(is.na(test))<=0.9*nrow(test)]
+testing <- test1[,8:length(test1)]
+dim(testing)
+```
+
+Now, we check if any of the remaining variables have near 0 variace. If they do we remove those columns as well.
+
+```{r NZV, message=FALSE, warning=FALSE}
+nearZeroVariance <- nearZeroVar(train1)
+nearZeroVariance
+```
+
+As, none of the columns have near 0 variance we can proceed with further analyses and using machine learning models for predictions.
+
+
+### Partioning the data
+
+In this section, we partition the data into training and validation sets. The models which we use will be trained on the training set and then tested on the validation set. The model which is the best fit for the dataset will then be selected and used for the prediction for the values of the test dataset.
+
+```{r partition, warning=FALSE, message=FALSE}
+inTrain <- createDataPartition(train1$classe, p=0.8, list = FALSE)
+
+validation <- train1[-inTrain,]
+training <- train1[inTrain,]
+dim(training)
+```
+
+
+## Exploraotry Analysis
+
+For one final step before modeling, we will check the data for correlation between the remaining variables. We also find out how many variable have high correlation among them. Based on the outcome we will deicde whether to exclude or include those variables for modelling.
+
+```{r eda, message=FALSE, warning=FALSE}
+corMat <- cor(training[,-53])
+corrplot(corMat, order = "FPC", method = "color", type = "lower", 
+         tl.cex = 0.8, tl.col = rgb(0, 0, 0),mar = c(1, 1, 1, 1), title = "Correlogram of the Training Dataset")
+```
+
+As one can see, the correlation is showed by red and blue. The darker the red the more negative the correlation (closer to -1). The darker the blue the more positive the correlation (closer to 1). 
+
+
+Also, as we can see from the diagram, some of the variable have a high correlation. Ideally we should remove those variables before fitting any model. This is to avoid overfitting. 
